@@ -11,7 +11,7 @@ import logging
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters, CallbackContext
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 
-#bot_token = '5019299509:AAED4g7yhNzGKT4JMgyAqytWDVURofAS9fg'
+#bot_token = 'token'
 
 
 def to_bytes(string: str) -> bytes:
@@ -53,8 +53,8 @@ logger = logging.getLogger(__name__)
 
 CHOOSING, MSG_TAG, TYPING_MSG, TYPING_PASS, PWD_STATE = range(5)
 
-reply_keyboard = [['encrypt message', 'decrypt message']]
-choosing_keyboard = [['delete', 'save']]
+reply_keyboard = [['зашифровать', 'расшифровать']]
+choosing_keyboard = [['удалить', 'сохранить']]
 
 markup = ReplyKeyboardMarkup(reply_keyboard,
                              one_time_keyboard=True,
@@ -68,12 +68,12 @@ def start(update: Update, context: CallbackContext) -> int:
     msg_id = update.message.message_id
     context.user_data.setdefault('trash_ids', []).append(msg_id)
     bot_msg_id = update.message.reply_text(
-        f"Hi, I can encrypt and decrypt a messages for you. ヽ(´▽`)/\n"
-        f"You can type /restart at any moment to restart the conversation.")
+        f"Привет, я могу зашифровать твои заметки, чтобы они были в безопасности ヽ(´▽`)/\n"
+        f"Можешь написать /restart, чтобы перезапустить диалог")
     context.user_data['trash_ids'].append(bot_msg_id.message_id)
     bot_msg_id_ = update.message.reply_text(
-        f"I will clear the history (from chat and server side), "
-        f"so it will be safe (-`Ღ´-)\n",
+        f"В конце я очищу диалог, "
+        f"таким образом все будет безопасно (-`Ღ´-)\n",
         reply_markup=markup,
     )
     context.user_data['trash_ids'].append(bot_msg_id_.message_id)
@@ -86,7 +86,7 @@ def first_choice(update: Update, context: CallbackContext) -> int:
     text = update.message.text
     context.user_data['choice'] = text
     bot_msg_id = update.message.reply_text(
-        f"Let's make a name for your note \n\nฅ^-ﻌ-^ฅ",
+        f"Давай выберем имя для твоей заметки. Просто отправь мне его \n\nฅ^-ﻌ-^ฅ",
         reply_markup=ReplyKeyboardRemove())
     context.user_data['trash_ids'].append(bot_msg_id.message_id)
     return MSG_TAG
@@ -98,7 +98,7 @@ def msg_tag(update: Update, context: CallbackContext) -> int:
     text = update.message.text
     context.user_data['tag'] = text
     bot_msg_id = update.message.reply_text(
-        f"Now send me the message to {context.user_data['choice'].split()[0]}:"
+        f"Теперь пришлите мне текст, чтобы {context.user_data['choice'].split()[0]}: его"
     )
     context.user_data['trash_ids'].append(bot_msg_id.message_id)
     return TYPING_MSG
@@ -113,7 +113,7 @@ def received_msg(update: Update, context: CallbackContext) -> int:
     text = update.message.text
     context.user_data['message'] = text
     bot_msg_id = update.message.reply_text(
-        f"Now send me the password to {context.user_data['choice'].split()[0]} your note. \n\n(`･ω･´)\n"
+        f"Пришли пароль, чтобы {context.user_data['choice'].split()[0]} твою заметку \n\n(`･ω･´)\n"
     )
     context.user_data['trash_ids'].append(bot_msg_id.message_id)
     return TYPING_PASS
@@ -126,7 +126,7 @@ def received_pass(update: Update, context: CallbackContext) -> int:
     context.user_data['password'] = text
     context.user_data['pwd_msg_id'] = msg_id
     bot_msg_id = update.message.reply_text(
-        f"Do you want to save the password?", reply_markup=choosing_markup)
+        f"Хотите, чтобы я сохранил пароль?", reply_markup=choosing_markup)
     context.user_data['trash_ids'].append(bot_msg_id.message_id)
     return PWD_STATE
 
@@ -135,11 +135,11 @@ def received_password_state(update: Update, context: CallbackContext):
     text = update.message.text
     msg_id = update.message.message_id
     context.user_data['trash_ids'].append(msg_id)
-    if text == 'save':
+    if text == 'сохранить':
         context.user_data['pwd_state'] = text
-    elif text == 'delete':
+    elif text == 'удалить':
         context.user_data['pwd_state'] = text
-    bot_msg_id = update.message.reply_text(f"One moment...",
+    bot_msg_id = update.message.reply_text(f"Секунду...",
                                            reply_markup=ReplyKeyboardRemove())
     context.user_data['trash_ids'].append(bot_msg_id.message_id)
     result_msg(update, context)
@@ -150,13 +150,13 @@ def result_msg(update: Update, context: CallbackContext):
     method_choice = context.user_data['choice']
     msg_to = context.user_data['message']
     pass_to = context.user_data['password']
-    if method_choice == 'encrypt message':
+    if method_choice == 'зашифровать':
         raw_res_msg = encrypt_aes_gcm(msg_to, pass_to)
         res_msg_list = [
             binascii.hexlify(chunk).decode('utf-8') for chunk in raw_res_msg
         ]
         res_msg = ':'.join(res_msg_list)
-    elif method_choice == 'decrypt message':
+    elif method_choice == 'расшифровать':
         try:
             raw_encr_msg = msg_to.split(":")
             encr_msg_tuple = tuple(
@@ -164,21 +164,21 @@ def result_msg(update: Update, context: CallbackContext):
             res_msg = decrypt_aes_gcm(encr_msg_tuple, pass_to)
             print(type(res_msg))
         except Exception as e:
-            print(f"Oops! not valid msg {e.__class__}")
+            print(f"Блин, что-то пошло не так в {e.__class__}")
             return wrong_data(update, context)
             # return None  # ConversationHandler.END
-    if context.user_data['pwd_state'] == 'save':
+    if context.user_data['pwd_state'] == 'сохранить':
         update.message.reply_text(f"tag: {context.user_data['tag']}\n"
-                                  f"password: {context.user_data['password']}")
-    elif context.user_data['pwd_state'] == 'delete':
-        update.message.reply_text(f"tag: {context.user_data['tag']}")
+                                  f"password: {context.user_data['password']}\nЕсли захотите сделать еще одну заметку или расшифровать старую, напишите /start")
+    elif context.user_data['pwd_state'] == 'удалить':
+        update.message.reply_text(f"tag: {context.user_data['tag']}\nЕсли захотите сделать еще одну заметку или расшифровать старую, напишите /start")
     update.message.reply_text(f"{res_msg}")
     for itm in context.user_data['trash_ids']:
         try:
             context.bot.delete_message(update.message.chat_id, itm)
         except Exception as e:
             print(
-                f"Oops (๑•́ ₃ •̀๑) \nSomething goes wrong in {result_msg.__name__} func while deleting trash_ID's. {e.__class__}"
+                f"Ужас (๑•́ ₃ •̀๑) \nчто-то пошло не так в {result_msg.__name__} , пока удалялась trash_ID. {e.__class__}"
             )
     context.user_data.clear()
     # return ConversationHandler.END
@@ -190,16 +190,16 @@ def end_conv(update: Update, context: CallbackContext) -> int:
     user = update.message.from_user
     logger.info("User %s canceled the conversation.", user.first_name)
     bot_msg_id = update.message.reply_text(
-        'Ok, type/tap /start to start the conversation again',
+        'Напиши /restart, чтобы перезапустить диалог',
         reply_markup=ReplyKeyboardRemove())
     for itm in context.user_data['trash_ids']:
         try:
             context.bot.delete_message(update.message.chat_id, itm)
         except Exception as e:
             print(
-                f"Oops (๑•́ ₃ •̀๑) \nSomething goes wrong in {end_conv.__name__} func. {e.__class__}"
+                f"Ужас (๑•́ ₃ •̀๑) \nЧто-то пошло не так в {end_conv.__name__}  {e.__class__}"
             )
-    context.user_datpa['trash_ids'].append(bot_msg_id.message_id)
+    context.user_data['trash_ids'].append(bot_msg_id.message_id)
     return ConversationHandler.END
 
 
@@ -207,8 +207,8 @@ def wrong_data(update: object, context: CallbackContext):
     msg_id = update.message.message_id
     context.user_data['trash_ids'].append(msg_id)
     bot_msg_id = update.message.reply_text(
-        f"Oops (๑•́ ₃ •̀๑) \nThe password or message structure is incorrect,"
-        f"\ntype/tap /restart to restart the conversation",
+        f"Ужас (๑•́ ₃ •̀๑) \nПароль или сообщение некорректны,"
+        f"\nнапиши /restart",
         reply_markup=ReplyKeyboardRemove())
     context.user_data['trash_ids'].append(bot_msg_id.message_id)
     return ConversationHandler.END
@@ -218,11 +218,11 @@ def error_handler(update: object, context: CallbackContext):
     msg_id = update.message.message_id
     context.user_data.setdefault('trash_ids', []).append(msg_id)
     logger.error(
-        msg="Exception while handling an update:",
+        msg="Ошибка при обработке запроса:",
         exc_info=context.error,
     )
     bot_msg_id = update.message.reply_text(
-        f"Nope, type /start or /restart to start/restart the conversation",
+        f"Что-то пошло не так, напиши /start или /restart, чтобы перезапустить диалог",
         reply_markup=ReplyKeyboardRemove())
     context.user_data['trash_ids'].append(bot_msg_id.message_id)
     return end_conv
@@ -238,7 +238,7 @@ def main() -> None:
         states={
             CHOOSING: [
                 MessageHandler(
-                    Filters.regex('^(encrypt message|decrypt message)$')
+                    Filters.regex('^(расшифровать|зашифровать)$')
                     & ~Filters.command, first_choice),
             ],
             MSG_TAG: [
@@ -252,7 +252,7 @@ def main() -> None:
             ],
             PWD_STATE: [
                 MessageHandler(
-                    Filters.regex('^(delete|save)$') & ~Filters.command,
+                    Filters.regex('^(удалить|сохранить)$') & ~Filters.command,
                     received_password_state),
             ],
         },
